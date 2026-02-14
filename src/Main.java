@@ -1,4 +1,5 @@
 import java.sql.*;
+import java.util.Scanner;
 
 public class Main {
     private static final String url = "jdbc:mysql://localhost:3306/jdbc_demo";
@@ -23,8 +24,9 @@ public class Main {
             do {
                 int id = resultSet.getInt("id");
                 String name = resultSet.getString("name");
+                int balance = resultSet.getInt("balance");
                 System.out.println("____________________");
-                System.out.println("| id: " + id + " | name: " + name + " |");
+                System.out.println("| id: " + id + " | name: " + name + " | balance: " + balance + " |");
             } while (resultSet.next());
             System.out.println("____________________");
 
@@ -197,6 +199,84 @@ public class Main {
     }
 
 
+    /**
+     * Checks whether user has sufficient balance.
+     */
+    public static boolean isBalanceSufficient(Connection connection, int userId, int amount) throws SQLException {
+        String query = "SELECT balance FROM users WHERE id = ?";
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+        preparedStatement.setInt(1, userId);
+
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        if (!resultSet.next()) {
+            throw new SQLException("User not found");
+        }
+
+        int balance = resultSet.getInt("balance");
+        return balance >= amount;
+    }
+
+
+    /**
+     * Performs transaction between two users.
+     */
+    public static void performTransaction() {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter receiver ID: ");
+        int receiverId = scanner.nextInt();
+
+        System.out.print("Enter issuer ID: ");
+        int issuerId = scanner.nextInt();
+
+        System.out.print("Enter amount: ");
+        int amount = scanner.nextInt();
+
+        try {
+            Connection connection = DriverManager.getConnection(url, user, password);
+
+            connection.setAutoCommit(false); // start transaction
+
+            if (!isBalanceSufficient(connection, issuerId, amount)) {
+                System.out.println("Insufficient balance");
+                connection.rollback();
+                connection.close();
+                return;
+            }
+
+            String deductQuery = "UPDATE users SET balance = balance - ? WHERE id = ?";
+            PreparedStatement deductStmt = connection.prepareStatement(deductQuery);
+            deductStmt.setInt(1, amount);
+            deductStmt.setInt(2, issuerId);
+            deductStmt.executeUpdate();
+
+            String creditQuery = "UPDATE users SET balance = balance + ? WHERE id = ?";
+            PreparedStatement creditStmt = connection.prepareStatement(creditQuery);
+            creditStmt.setInt(1, amount);
+            creditStmt.setInt(2, receiverId);
+            creditStmt.executeUpdate();
+
+            connection.commit(); // success
+            System.out.println("Transaction successful");
+
+            connection.close();
+            readUsers();
+
+        } catch (SQLException e) {
+
+            e.printStackTrace();
+            try {
+                Connection connection = DriverManager.getConnection(url, user, password);
+                connection.rollback(); // rollback on failure
+                connection.close();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+
     public static void main(String[] args) {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -212,7 +292,10 @@ public class Main {
 //        updateUserPreparedStmt();
 //        deleteUserPreparedStmt();
 
+
 //        addUsersBatch();
 //        addUserPreparedBatch();
+
+        performTransaction();
     }
 }

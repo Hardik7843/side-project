@@ -284,7 +284,7 @@ public class Main {
             e.printStackTrace();
         }
 
-//        readUsers();
+        readUsers();
 //        addUsers();
 //        truncateUsers();
 
@@ -296,6 +296,6 @@ public class Main {
 //        addUsersBatch();
 //        addUserPreparedBatch();
 
-        performTransaction();
+//        performTransaction();
     }
 }

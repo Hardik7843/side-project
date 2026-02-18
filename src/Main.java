@@ -284,7 +284,7 @@ public class Main {
             e.printStackTrace();
         }
 
-        readUsers();
+//        readUsers();
 //        addUsers();
 //        truncateUsers();
 
